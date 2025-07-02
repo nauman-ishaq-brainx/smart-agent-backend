@@ -1,0 +1,41 @@
+{
+  "name": "smart-agent-backend",
+  "version": "1.0.0",
+  "description": "This contains backend for smart agent",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nauman-ishaq-brainx/smart-agent-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nauman-ishaq-brainx/smart-agent-backend/issues"
+  },
+  "homepage": "https://github.com/nauman-ishaq-brainx/smart-agent-backend#readme",
+  "dependencies": {
+    "@langchain/community": "^0.3.47",
+    "@langchain/langgraph": "^0.3.6",
+    "@langchain/openai": "^0.5.16",
+    "@pinecone-database/pinecone": "^6.1.1",
+    "axios": "^1.10.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "express-fileupload": "^1.5.1",
+    "googleapis": "^150.0.1",
+    "langchain": "^0.3.29",
+    "multer": "^2.0.1",
+    "nodemailer": "^7.0.4",
+    "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
