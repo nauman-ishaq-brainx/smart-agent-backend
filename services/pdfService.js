@@ -39,7 +39,6 @@ const processPdf = async (buffer, fileName) => {
     textKey: "text",
   });
 
-  console.log(`✅ PDF processed and stored: ${fileName}`);
 };
 
 module.exports = { processPdf };
