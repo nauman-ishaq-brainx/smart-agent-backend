@@ -7,18 +7,50 @@ const axios = require("axios");
 const dotenv = require("dotenv");
 const emailService = require('./emailService');
 const queryService = require('./queryService');
+const calendarService = require('./calendarService')
 
 
 dotenv.config();
 
+const calendarEventTool = tool(
+  async ({ summary, description, startTime, endTime, attendees }) => {
+    try {
+      const event = await calendarService.addEvent({ summary, description, startTime, endTime, attendees });
+      return `Event created: ${event.htmlLink}`;
+    } catch (err) {
+      return "Failed to create the calendar event. Please check the details or try again later.";
+    }
+  },
+  {
+    name: "addCalendarEvent",
+    description: "Schedule a new event in Google Calendar. Provide the title, description, start, and end time.",
+    schema: z.object({
+      summary: z.string().describe("Title of the calendar event"),
+      description: z.string().describe("Details of the event"),
+      startTime: z.string().describe("Start time in ISO format with timezone, e.g. 2025-07-03T14:00:00+05:00"),
+      endTime: z.string().describe("End time in ISO format with timezone, e.g. 2025-07-03T15:00:00+05:00"),
+     attendees: z
+  .array(
+    z.object({
+      email: z.string().email().describe("Email of the attendee"),
+      displayName: z.string().optional().describe("Name of the attendee"),
+    })
+  )
+  .optional()
+  .describe("List of attendees to invite to the event"),
+    }),
+  }
+);
+
+
 // --- Tool 1: Query from PDF ---
 const queryTool = tool(
-    
+
   async ({ question }) => {
     // const res = await axios.post("http://localhost:5000/api/v1/query", { query: question });
-    const res = await queryService.runQueryChain({query:question});
+    const res = await queryService.runQueryChain({ query: question });
 
-    return res.text|| "No answer found in the PDF.";
+    return res.text || "No answer found in the PDF.";
   },
   {
     name: "queryPDF",
@@ -33,8 +65,9 @@ const queryTool = tool(
 const emailTool = tool(
   async ({ to, subject, text }) => {
     try {
+      console.log('sending email')
       await emailService.sendEmail({ to, subject, text });
-      return "Email sent."; 
+      return "Email sent.";
     } catch (err) {
       return "It seems there is an issue with sending the email. Please try again later or check the email address for any errors.";
     }
@@ -50,7 +83,8 @@ const emailTool = tool(
   }
 );
 // --- Tools & LLM Setup ---
-const tools = [queryTool, emailTool];
+const tools = [queryTool, emailTool, calendarEventTool];
+
 const toolNode = new ToolNode(tools);
 
 const llm = new ChatOpenAI({
@@ -63,10 +97,32 @@ async function llmCall(state) {
   const systemPrompt = {
     role: "system",
     content: `
-You are an assistant that must ALWAYS use the tools provided.
-if the query is about sending emails, you must use 'emailTool' to send email. Otherwise use the tool 'queryTool'. do no create an answer by yourself. Your must only use tools provided.
-    `.trim()
+You are a strict assistant that must always use the tools provided.
+
+When the user wants to add a calendar event:
+
+1. Always use today's date unless the user specifies another day.
+   - Today is July 3, 2025.
+2. Always set event time in the 'Asia/Karachi' timezone (UTC+05:00).
+3. Always return ISO 8601 datetime strings with timezone offsets.
+   - Example: "2025-07-03T14:00:00+05:00" (for 2:00 PM Pakistan time).
+4. Do NOT use UTC time or 'Z' suffix (e.g., avoid "2025-07-03T14:00:00Z").
+5. The event time must reflect the user's intended local time (e.g., if they say "2pm today", it should be 14:00 in Asia/Karachi). Write the name of attendees in an array of objects in the 
+following format.
+[
+  { "email": "lead@example.com", "displayName": "Team Lead" },
+  { "email": "designer@example.com" }
+]
+
+replace the emails with the emails given in the query. If there no attendee, keep the array empty. Add ony one event in a single query.
+
+Do not respond with free text — always use the calendar tool.
+
+If the user asks to send an email, use the 'emailTool'. the name of sender should be 'Nauman' and don't use any placeholders in the email. 
+For generic questions, use the 'queryTool'.
+`.trim()
   };
+
 
   const result = await llm.invoke([systemPrompt, ...state.messages]);
 
