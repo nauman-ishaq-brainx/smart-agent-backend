@@ -15,7 +15,6 @@ oauth2Client.setCredentials({
 const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
 const addEvent = async ({ summary, description, startTime, endTime, attendees }) => {
-    console.log(attendees)
     try {
         const event = {
       summary,
@@ -35,14 +34,14 @@ const addEvent = async ({ summary, description, startTime, endTime, attendees })
         const response = await calendar.events.insert({
             calendarId: "primary",
             resource: event,
-            sendUpdates: "all", // 🔔 Sends invitation emails to attendees
+            sendUpdates: "all", // Sends invitation emails to attendees
         });
 
 
-        console.log("✅ Event created:", response.data.htmlLink);
+
         return response.data;
     } catch (err) {
-        console.error("❌ Failed to create event:", err.message);
+
         throw err;
     }
 };
@@ -60,19 +59,16 @@ const getEventsInRange = async (startTimeISO, endTimeISO) => {
         const events = res.data.items;
 
         if (!events.length) {
-            console.log('📭 No events found in this time range.');
             return [];
         }
 
-        console.log(`📅 ${events.length} event(s) found between ${startTimeISO} and ${endTimeISO}:`);
+
         events.forEach((event, i) => {
             const start = event.start.dateTime || event.start.date;
-            console.log(`  ${i + 1}. ${event.summary} — ${start}`);
         });
 
         return events;
     } catch (error) {
-        console.error('❌ Error fetching events:', error.message);
         throw error;
     }
 };

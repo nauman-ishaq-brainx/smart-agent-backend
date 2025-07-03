@@ -11,6 +11,7 @@ const calendarService = require('./calendarService')
 
 
 dotenv.config();
+const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Karachi" });
 
 const calendarEventTool = tool(
   async ({ summary, description, startTime, endTime, attendees }) => {
@@ -47,7 +48,7 @@ const calendarEventTool = tool(
 const queryTool = tool(
 
   async ({ question }) => {
-    // const res = await axios.post("http://localhost:5000/api/v1/query", { query: question });
+
     const res = await queryService.runQueryChain({ query: question });
 
     return res.text || "No answer found in the PDF.";
@@ -65,7 +66,6 @@ const queryTool = tool(
 const emailTool = tool(
   async ({ to, subject, text }) => {
     try {
-      console.log('sending email')
       await emailService.sendEmail({ to, subject, text });
       return "Email sent.";
     } catch (err) {
@@ -82,8 +82,40 @@ const emailTool = tool(
     }),
   }
 );
+
+const getEventsInRangeTool = tool(
+  async ({ startTime, endTime }) => {
+    try {
+      const events = await calendarService.getEventsInRange(startTime, endTime);
+      if (!events.length) return "No events found in this time range.";
+
+      const formatted = events.map((event) => {
+        const start = event.start?.dateTime || event.start?.date;
+        const end = event.end?.dateTime || event.end?.date;
+        return `📅 ${event.summary} (${start} → ${end})`;
+      });
+
+      return `Found ${events.length} event(s):\n\n${formatted.join("\n")}`;
+    } catch (err) {
+      return "Failed to fetch calendar events. Please check the time range format.";
+    }
+  },
+  {
+    name: "getEventsInRange",
+    description: "Get all calendar events between a given start and end time. Use ISO format with timezone offset.",
+    schema: z.object({
+      startTime: z
+        .string()
+        .describe("Start of the time range in ISO 8601 format with timezone, e.g. 2025-07-03T00:00:00+05:00"),
+      endTime: z
+        .string()
+        .describe("End of the time range in ISO 8601 format with timezone, e.g. 2025-07-03T23:59:59+05:00"),
+    }),
+  }
+);
+
 // --- Tools & LLM Setup ---
-const tools = [queryTool, emailTool, calendarEventTool];
+const tools = [queryTool, emailTool, calendarEventTool, getEventsInRangeTool];
 
 const toolNode = new ToolNode(tools);
 
@@ -102,7 +134,7 @@ You are a strict assistant that must always use the tools provided.
 When the user wants to add a calendar event:
 
 1. Always use today's date unless the user specifies another day.
-   - Today is July 3, 2025.
+   - Today is ${today}.
 2. Always set event time in the 'Asia/Karachi' timezone (UTC+05:00).
 3. Always return ISO 8601 datetime strings with timezone offsets.
    - Example: "2025-07-03T14:00:00+05:00" (for 2:00 PM Pakistan time).
@@ -120,6 +152,8 @@ Do not respond with free text — always use the calendar tool.
 
 If the user asks to send an email, use the 'emailTool'. the name of sender should be 'Nauman' and don't use any placeholders in the email. 
 For generic questions, use the 'queryTool'.
+
+If the user asks for their schedule, events, or availability between two times, use 'getEventsInRange'. Always require both start and end times in the query. Format them in ISO 8601 with +05:00 timezone.
 `.trim()
   };
 

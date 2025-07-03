@@ -27,8 +27,8 @@ rl.question("\n📥 Enter the code from that page here: ", async (code) => {
 
   try {
     const { tokens } = await oauth2Client.getToken(code);
-    console.log("\n✅ Your refresh token is:\n", tokens.refresh_token);
+    console.log("\nYour refresh token is:\n", tokens.refresh_token);
   } catch (err) {
-    console.error("❌ Error retrieving access token", err.message);
+    console.error("Error retrieving access token", err.message);
   }
 });
